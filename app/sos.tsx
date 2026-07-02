@@ -1,200 +1,201 @@
-import { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
-  Animated,
-  Easing,
-  Vibration,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
+import { useState } from "react";
 import { router } from "expo-router";
+import { useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { useAuth } from "@/contexts/AuthContext";
+import { useLocation } from "@/hooks/useLocation";
 import { Ionicons } from "@expo/vector-icons";
-import { COLORS, SPACING, RADIUS } from "@/constants/theme";
+import { COLORS } from "@/constants/theme";
 
 export default function SOSScreen() {
+  const { sessionToken } = useAuth();
+  const { location } = useLocation();
+  const triggerManual = useMutation(api.sos.triggerManual);
   const [triggered, setTriggered] = useState(false);
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const opacityAnim = useRef(new Animated.Value(1)).current;
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1.12,
-          duration: 800,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 800,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ])
+  const handleSOS = async () => {
+    Alert.alert(
+      "Send SOS Alert?",
+      "This will alert all your trusted contacts immediately.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Send SOS",
+          style: "destructive",
+          onPress: async () => {
+            setLoading(true);
+            try {
+              await triggerManual({
+                sessionToken: sessionToken!,
+                latitude: location?.latitude,
+                longitude: location?.longitude,
+              });
+              setTriggered(true);
+            } catch (err: any) {
+              Alert.alert("Error", err.message);
+            } finally {
+              setLoading(false);
+            }
+          },
+        },
+      ]
     );
-    loop.start();
-    return () => loop.stop();
-  }, []);
-
-  const handleSOS = () => {
-    Vibration.vibrate([0, 300, 150, 300, 150, 600]);
-    setTriggered(true);
-    // TODO: call api.sos.manualSOS with location + battery
   };
 
+  if (triggered) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.confirmedBox}>
+          <Ionicons name="checkmark-circle" size={64} color={COLORS.success} />
+          <Text style={styles.confirmedTitle}>SOS Sent</Text>
+          <Text style={styles.confirmedSub}>
+            Your trusted contacts have been alerted with your location.
+          </Text>
+        </View>
+        <TouchableOpacity style={styles.dismissButton} onPress={() => router.back()}>
+          <Text style={styles.dismissText}>Close</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
-    <View style={styles.screen}>
-      {/* Dismiss */}
-      <TouchableOpacity
-        style={styles.closeBtn}
-        onPress={() => router.back()}
-        accessibilityLabel="Close SOS screen"
-      >
-        <Ionicons name="close" size={22} color={COLORS.muted} />
+    <View style={styles.container}>
+      <TouchableOpacity style={styles.closeButton} onPress={() => router.back()}>
+        <Ionicons name="close" size={24} color={COLORS.muted} />
       </TouchableOpacity>
 
-      {triggered ? (
-        // ── Confirmed state ────────────────────────────────────────────────
-        <View style={styles.confirmedContainer}>
-          <Text style={styles.confirmedEmoji}>🚨</Text>
-          <Text style={styles.confirmedTitle}>Alert sent</Text>
-          <Text style={styles.confirmedSub}>
-            Your trusted circle has been notified with your location.
-          </Text>
-          <TouchableOpacity
-            style={styles.doneBtn}
-            onPress={() => router.back()}
-          >
-            <Text style={styles.doneBtnText}>Done</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        // ── Ready state ────────────────────────────────────────────────────
-        <View style={styles.centreContent}>
-          <Text style={styles.label}>Hold to send emergency alert</Text>
+      <View style={styles.inner}>
+        <Text style={styles.title}>Emergency SOS</Text>
+        <Text style={styles.subtitle}>
+          Pressing SOS will immediately alert all your trusted contacts with your current location.
+        </Text>
 
-          {/* Outer pulse ring */}
-          <Animated.View
-            style={[styles.ring, { transform: [{ scale: pulseAnim }] }]}
-            pointerEvents="none"
+        <View style={styles.locationRow}>
+          <Ionicons
+            name={location ? "location" : "location-outline"}
+            size={16}
+            color={location ? COLORS.success : COLORS.muted}
           />
-
-          {/* SOS button */}
-          <TouchableOpacity
-            style={styles.sosButton}
-            onPress={handleSOS}
-            activeOpacity={0.88}
-            accessibilityLabel="Trigger SOS"
-            accessibilityRole="button"
-          >
-            <Text style={styles.sosText}>SOS</Text>
-          </TouchableOpacity>
-
-          <Text style={styles.hint}>
-            Sends your live location, battery level, and a message to all trusted contacts.
+          <Text style={[styles.locationText, { color: location ? COLORS.success : COLORS.muted }]}>
+            {location ? "Location ready" : "Acquiring location..."}
           </Text>
         </View>
-      )}
+
+        <TouchableOpacity
+          style={[styles.sosButton, loading && { opacity: 0.6 }]}
+          onPress={handleSOS}
+          disabled={loading}
+          activeOpacity={0.85}
+        >
+          {loading ? (
+            <ActivityIndicator color={COLORS.white} size="large" />
+          ) : (
+            <>
+              <Ionicons name="shield" size={32} color={COLORS.white} />
+              <Text style={styles.sosButtonText}>SEND SOS</Text>
+            </>
+          )}
+        </TouchableOpacity>
+
+        <Text style={styles.hint}>Hold to confirm in the dialog</Text>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: COLORS.bg,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  closeBtn: {
+  container: { flex: 1, backgroundColor: "#0A0A0A" },
+  closeButton: {
     position: "absolute",
     top: 56,
-    right: SPACING.lg,
-    width: 40,
-    height: 40,
-    alignItems: "center",
+    right: 24,
+    zIndex: 10,
+    padding: 8,
+  },
+  inner: {
+    flex: 1,
     justifyContent: "center",
-  },
-
-  // ── Ready state
-  centreContent: {
     alignItems: "center",
-    paddingHorizontal: SPACING.xl,
+    paddingHorizontal: 32,
+    gap: 20,
   },
-  label: {
-    color: COLORS.muted,
-    fontSize: 14,
-    letterSpacing: 0.3,
-    marginBottom: SPACING.xl,
+  title: {
+    fontSize: 32,
+    fontWeight: "800",
+    color: "#F0F0F0",
     textAlign: "center",
   },
-  ring: {
-    position: "absolute",
+  subtitle: {
+    fontSize: 15,
+    color: "#666",
+    textAlign: "center",
+    lineHeight: 22,
+  },
+  locationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  locationText: {
+    fontSize: 13,
+    fontWeight: "500",
+  },
+  sosButton: {
     width: 180,
     height: 180,
     borderRadius: 90,
-    borderWidth: 1,
-    borderColor: COLORS.sos,
-    opacity: 0.3,
-  },
-  sosButton: {
-    width: 156,
-    height: 156,
-    borderRadius: 78,
     backgroundColor: COLORS.sos,
     alignItems: "center",
     justifyContent: "center",
+    gap: 8,
+    marginTop: 16,
+    shadowColor: COLORS.sos,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 30,
+    elevation: 20,
   },
-  sosText: {
+  sosButtonText: {
     color: COLORS.white,
-    fontSize: 34,
-    fontWeight: "700",
-    letterSpacing: 4,
+    fontSize: 20,
+    fontWeight: "800",
+    letterSpacing: 2,
   },
-  hint: {
-    color: COLORS.muted,
-    fontSize: 13,
-    textAlign: "center",
-    lineHeight: 20,
-    marginTop: SPACING.xl,
-    maxWidth: 280,
-  },
-
-  // ── Confirmed state
-  confirmedContainer: {
+  hint: { color: "#444", fontSize: 13 },
+  confirmedBox: {
+    flex: 1,
+    justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: SPACING.xl,
-  },
-  confirmedEmoji: {
-    fontSize: 52,
-    marginBottom: SPACING.lg,
+    gap: 16,
+    paddingHorizontal: 32,
   },
   confirmedTitle: {
-    color: COLORS.white,
-    fontSize: 28,
-    fontWeight: "700",
-    marginBottom: SPACING.sm,
+    fontSize: 32,
+    fontWeight: "800",
+    color: COLORS.success,
   },
   confirmedSub: {
-    color: COLORS.muted,
     fontSize: 15,
+    color: "#666",
     textAlign: "center",
     lineHeight: 22,
-    marginBottom: SPACING.xl,
-    maxWidth: 280,
   },
-  doneBtn: {
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.xxl,
-    borderRadius: RADIUS.full,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+  dismissButton: {
+    margin: 32,
+    padding: 16,
+    backgroundColor: "#161616",
+    borderRadius: 12,
+    alignItems: "center",
   },
-  doneBtnText: {
-    color: COLORS.white,
-    fontSize: 15,
-    fontWeight: "500",
-  },
+  dismissText: { color: "#F0F0F0", fontWeight: "600", fontSize: 16 },
 });

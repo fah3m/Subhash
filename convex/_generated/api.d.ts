@@ -10,6 +10,12 @@
 
 import type * as _helpers from "../_helpers.js";
 import type * as auth from "../auth.js";
+import type * as checkIns from "../checkIns.js";
+import type * as evidence from "../evidence.js";
+import type * as notifications from "../notifications.js";
+import type * as sos from "../sos.js";
+import type * as timeline from "../timeline.js";
+import type * as trustedContacts from "../trustedContacts.js";
 
 import type {
   ApiFromModules,
@@ -20,6 +26,12 @@ import type {
 declare const fullApi: ApiFromModules<{
   _helpers: typeof _helpers;
   auth: typeof auth;
+  checkIns: typeof checkIns;
+  evidence: typeof evidence;
+  notifications: typeof notifications;
+  sos: typeof sos;
+  timeline: typeof timeline;
+  trustedContacts: typeof trustedContacts;
 }>;
 
 /**

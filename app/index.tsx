@@ -1,15 +1,17 @@
 import { Redirect } from "expo-router";
-import { useConvexAuth } from "convex/react";
 import { View, Text } from "react-native";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Index() {
-  const { isAuthenticated, isLoading } = useConvexAuth();
+  const { user, isLoading } = useAuth();
 
-  console.log("Auth state:", { isAuthenticated, isLoading });
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#0A0A0A" }}>
+        <Text style={{ color: "white" }}>Loading...</Text>
+      </View>
+    );
+  }
 
-  if (isLoading) return <View><Text style={{color:"white"}}>Loading...</Text></View>;
-
-  return isAuthenticated
-    ? <Redirect href="/(tabs)/home" />
-    : <Redirect href="/auth/login" />;
+  return user ? <Redirect href="/(tabs)/home" /> : <Redirect href="/auth/login" />;
 }

@@ -2,13 +2,13 @@ import { Platform } from "react-native";
 
 export const COLORS = {
   // Backgrounds
-  bg: "#0A0A0F",          // app background — near black
-  surface: "#13131A",     // tab bar, cards
-  surfaceHigh: "#1C1C26", // elevated surfaces
+  bg: "#0A0A0F",
+  surface: "#13131A",
+  surfaceHigh: "#1C1C26",
 
   // Text
   white: "#F0F0F5",
-  muted: "#8B95A1",       // secondary text
+  muted: "#8B95A1",
 
   // Tabs
   tabInactive: "#555B66",
@@ -17,12 +17,14 @@ export const COLORS = {
   border: "#22222E",
 
   // SOS
-  sos: "#C0392B",         // deep red — serious, not alarming
+  sos: "#C0392B",
   sosRing: "#C0392B",
 
   // Status
   success: "#27AE60",
   warning: "#E67E22",
+
+  primary: "#D4A017",    // ← add this
 };
 
 export const TAB_BAR_HEIGHT = Platform.OS === "ios" ? 88 : 80;

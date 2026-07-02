@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/AuthContext";
 import { COLORS, TAB_BAR_HEIGHT } from "@/constants/theme";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 function SOSButton() {
   const pulse = useRef(new Animated.Value(1)).current;
@@ -50,6 +51,7 @@ function SOSButton() {
 
 export default function TabLayout() {
   const { user, isLoading } = useAuth();
+  usePushNotifications();
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -115,6 +117,9 @@ export default function TabLayout() {
           ),
         }}
       />
+      {/* Vault is no longer a tab bar item — it stays reachable at /vault via
+          the Home screen's "Evidence Vault" quick-action card (Step 9). */}
+      <Tabs.Screen name="vault" options={{ href: null }} />
       <Tabs.Screen name="index" options={{ href: null }} />
       <Tabs.Screen name="explore" options={{ href: null }} />
     </Tabs>

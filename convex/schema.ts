@@ -67,6 +67,7 @@ export default defineSchema({
     batteryPercent: v.optional(v.number()),
     message: v.string(),
     notifiedContacts: v.array(v.id("users")),
+    dismissedBy: v.optional(v.array(v.id("users"))), // NEW — viewers who cleared this alert
   }).index("by_user", ["userId"]),
 
   timelineEvents: defineTable({

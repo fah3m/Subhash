@@ -13,11 +13,12 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTimer } from "@/hooks/useTimer";
+import { useLocation } from "@/hooks/useLocation";
 import { COLORS } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 
 const DURATIONS = [
-  { label: "30 sec", seconds: 5 },
+  { label: "30 sec", seconds: 30 },
   { label: "15 min", seconds: 900 },
   { label: "30 min", seconds: 1800 },
   { label: "1 hour", seconds: 3600 },
@@ -26,6 +27,7 @@ const DURATIONS = [
 
 export default function CheckInScreen() {
   const { sessionToken } = useAuth();
+  const { location } = useLocation();
   const [label, setLabel] = useState("");
   const [selectedDuration, setSelectedDuration] = useState(1800);
   const [loading, setLoading] = useState(false);
@@ -55,6 +57,8 @@ export default function CheckInScreen() {
         sessionToken: sessionToken!,
         label: label.trim(),
         durationSeconds: selectedDuration,
+        latitude: location?.latitude,
+        longitude: location?.longitude,
       });
       setLabel("");
     } catch (err: any) {
@@ -79,7 +83,6 @@ export default function CheckInScreen() {
     }
   };
 
-  // Loading
   if (latestCheckIn === undefined) {
     return (
       <View style={styles.center}>
@@ -88,7 +91,6 @@ export default function CheckInScreen() {
     );
   }
 
-  // Expired screen — status comes directly from Convex, no guessing
   if (latestCheckIn?.status === "expired" && !dismissed) {
     return (
       <View style={styles.container}>
@@ -113,7 +115,6 @@ export default function CheckInScreen() {
     );
   }
 
-  // Active timer
   if (latestCheckIn?.status === "active") {
     return (
       <View style={styles.container}>
@@ -149,13 +150,23 @@ export default function CheckInScreen() {
     );
   }
 
-  // Start form (no check-in, cancelled, or dismissed)
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
         <Text style={styles.title}>Check-in Timer</Text>
         <Text style={styles.subtitle}>
           If you don't cancel before time runs out, SOS fires automatically.
+        </Text>
+      </View>
+
+      <View style={styles.locationRow}>
+        <Ionicons
+          name={location ? "location" : "location-outline"}
+          size={14}
+          color={location ? COLORS.success : "#555"}
+        />
+        <Text style={[styles.locationText, { color: location ? COLORS.success : "#555" }]}>
+          {location ? "Location ready" : "Acquiring location..."}
         </Text>
       </View>
 
@@ -221,9 +232,16 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#0A0A0A" },
   content: { padding: 24, paddingTop: 60 },
   center: { flex: 1, backgroundColor: "#0A0A0A", justifyContent: "center", alignItems: "center" },
-  header: { marginBottom: 32, paddingTop: 60, paddingHorizontal: 24 },
+  header: { marginBottom: 24, paddingTop: 60, paddingHorizontal: 24 },
   title: { fontSize: 28, fontWeight: "800", color: "#F0F0F0", marginBottom: 6 },
   subtitle: { fontSize: 14, color: "#666", lineHeight: 20 },
+  locationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 20,
+  },
+  locationText: { fontSize: 13, fontWeight: "500" },
   sectionLabel: {
     fontSize: 13,
     fontWeight: "600",

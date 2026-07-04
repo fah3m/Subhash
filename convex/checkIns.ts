@@ -8,6 +8,8 @@ export const startCheckIn = mutation({
     sessionToken: v.string(),
     label: v.string(),
     durationSeconds: v.number(),
+    latitude: v.optional(v.number()),
+    longitude: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx, args.sessionToken);
@@ -21,6 +23,8 @@ export const startCheckIn = mutation({
       startedAt: now,
       expiresAt,
       status: "active",
+      latitude: args.latitude,
+      longitude: args.longitude,
     });
 
     const scheduledFnId = await ctx.scheduler.runAt(
@@ -109,10 +113,11 @@ export const handleExpiry = internalMutation({
       timestamp: Date.now(),
     });
 
-    // 👇 this is the new line
     await ctx.scheduler.runAfter(0, internal.sos.triggerAlert, {
       userId: checkIn.userId,
       checkInId,
+      latitude: checkIn.latitude,    // ← pass stored location
+      longitude: checkIn.longitude,  // ← pass stored location
     });
   },
 });

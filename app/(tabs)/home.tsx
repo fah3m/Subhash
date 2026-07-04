@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   Linking,
+  Alert,
 } from "react-native";
 import { router } from "expo-router";
 import { useQuery, useMutation } from "convex/react";
@@ -23,7 +24,7 @@ function timeAgo(timestamp: number) {
 }
 
 export default function HomeScreen() {
-  const { user, sessionToken } = useAuth();
+  const { user, sessionToken, logout } = useAuth();
 
   const activeCheckIn = useQuery(
     api.checkIns.getActive,
@@ -52,19 +53,38 @@ export default function HomeScreen() {
     dismissAlert({ sessionToken, alertId: alertId as any });
   };
 
+  const handleLogout = () => {
+    Alert.alert("Log out", "Are you sure you want to log out?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Log out",
+        style: "destructive",
+        onPress: async () => {
+          await logout();
+          router.replace("/auth/login");
+        },
+      },
+    ]);
+  };
+
   const activeContactsCount =
     myContacts?.filter((c) => c.status === "accepted").length ?? 0;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
-        <Text style={styles.greeting}>SafePass</Text>
-        <Text style={styles.subGreeting}>
-          {user ? `Hi, ${user.name.split(" ")[0]}` : ""}
-        </Text>
+        <View>
+          <Text style={styles.greeting}>SafePass</Text>
+          <Text style={styles.subGreeting}>
+            {user ? `Hi, ${user.name.split(" ")[0]}` : ""}
+          </Text>
+        </View>
+        <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+          <Ionicons name="log-out-outline" size={22} color={COLORS.muted} />
+        </TouchableOpacity>
       </View>
 
-      {/* INCOMING SOS ALERTS — top priority, real-time */}
+      {/* INCOMING SOS ALERTS */}
       {incomingAlerts && incomingAlerts.length > 0 && (
         <View style={styles.alertsSection}>
           <Text style={styles.alertsSectionLabel}>🚨 Incoming Alerts</Text>
@@ -167,7 +187,12 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg },
   content: { padding: SPACING.lg, paddingTop: 60, paddingBottom: SPACING.xl },
-  header: { marginBottom: SPACING.xl + 4 },
+  header: {
+    marginBottom: SPACING.xl + 4,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
   greeting: {
     fontSize: 28,
     fontWeight: "800",
@@ -180,7 +205,13 @@ const styles = StyleSheet.create({
     fontFamily: FONT.regular,
     marginTop: 4,
   },
-
+  logoutButton: {
+    padding: 8,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
   alertsSection: { marginBottom: SPACING.lg },
   alertsSectionLabel: {
     fontSize: 13,
@@ -206,7 +237,6 @@ const styles = StyleSheet.create({
   alertLocationRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   alertLocationText: { color: COLORS.primary, fontSize: 13, fontWeight: "600" },
   alertNoLocation: { color: COLORS.muted, fontSize: 12, fontStyle: "italic" },
-
   checkinBanner: {
     flexDirection: "row",
     alignItems: "center",
@@ -220,7 +250,6 @@ const styles = StyleSheet.create({
   },
   checkinBannerTitle: { color: COLORS.white, fontWeight: "700", fontSize: 14 },
   checkinBannerSub: { color: COLORS.muted, fontSize: 13, marginTop: 2 },
-
   sectionLabel: {
     fontSize: 13,
     fontWeight: "600",
@@ -252,7 +281,6 @@ const styles = StyleSheet.create({
   },
   actionCardText: { color: COLORS.white, fontWeight: "600", fontSize: 14 },
   actionCardSub: { color: COLORS.muted, fontSize: 12, marginTop: 2 },
-
   sosShortcut: {
     flexDirection: "row",
     alignItems: "center",

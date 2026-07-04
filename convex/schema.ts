@@ -44,19 +44,21 @@ export default defineSchema({
     timestamp: v.number(),
   }).index("by_user", ["userId"]),
 
-  checkIns: defineTable({
-    userId: v.id("users"),
-    label: v.string(),
-    durationSeconds: v.number(),
-    startedAt: v.number(),
-    expiresAt: v.number(),
-    status: v.union(
-      v.literal("active"),
-      v.literal("cancelled"),
-      v.literal("expired")
-    ),
-    scheduledFnId: v.optional(v.id("_scheduled_functions")),
-  }).index("by_user", ["userId"]),
+checkIns: defineTable({
+  userId: v.id("users"),
+  label: v.string(),
+  durationSeconds: v.number(),
+  startedAt: v.number(),
+  expiresAt: v.number(),
+  status: v.union(
+    v.literal("active"),
+    v.literal("cancelled"),
+    v.literal("expired")
+  ),
+  scheduledFnId: v.optional(v.id("_scheduled_functions")),
+  latitude: v.optional(v.number()),   // ← add this
+  longitude: v.optional(v.number()),  // ← add this
+}).index("by_user", ["userId"]),
 
   sosAlerts: defineTable({
     userId: v.id("users"),

@@ -8,7 +8,7 @@ const TOKEN_KEY = "safepass_session_token";
 type SafeUser = {
   _id: string;
   name: string;
-  email: string;
+  username: string;
   pushToken?: string;
   createdAt: number;
 };
@@ -17,8 +17,8 @@ type AuthContextType = {
   user: SafeUser | null;
   sessionToken: string | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  login: (username: string, password: string) => Promise<void>;
+  register: (name: string, username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
 };
 
@@ -47,14 +47,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .finally(() => setIsBootstrapping(false));
   }, []);
 
-  const login = async (email: string, password: string) => {
-    const { token } = await loginMutation({ email, password });
+  const login = async (username: string, password: string) => {
+    const { token } = await loginMutation({ username, password });
     await SecureStore.setItemAsync(TOKEN_KEY, token);
     setSessionToken(token);
   };
 
-  const register = async (name: string, email: string, password: string) => {
-    const { token } = await registerMutation({ name, email, password });
+  const register = async (name: string, username: string, password: string) => {
+    const { token } = await registerMutation({ name, username, password });
     await SecureStore.setItemAsync(TOKEN_KEY, token);
     setSessionToken(token);
   };

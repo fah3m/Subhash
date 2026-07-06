@@ -13,6 +13,8 @@ import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS, SPACING, RADIUS, FONT } from "@/constants/theme";
+import { useEffect, useRef } from "react";
+import { Audio } from "expo-av";
 
 function timeAgo(timestamp: number) {
   const seconds = Math.floor((Date.now() - timestamp) / 1000);
@@ -21,6 +23,24 @@ function timeAgo(timestamp: number) {
   if (minutes < 60) return `${minutes}m ago`;
   const hours = Math.floor(minutes / 60);
   return `${hours}h ago`;
+}
+
+async function playAlertSound() {
+  try {
+    await Audio.setAudioModeAsync({ playsInSilentModeIOS: true });
+    const { sound } = await Audio.Sound.createAsync(
+      require("@/assets/sounds/alert2.mp3")
+    );
+    await sound.playAsync();
+    // Unload after playing to free memory
+    sound.setOnPlaybackStatusUpdate((status) => {
+      if (status.isLoaded && status.didJustFinish) {
+        sound.unloadAsync();
+      }
+    });
+  } catch (err) {
+    console.log("Alert sound failed:", err);
+  }
 }
 
 export default function HomeScreen() {
@@ -42,6 +62,22 @@ export default function HomeScreen() {
   );
 
   const dismissAlert = useMutation(api.sos.dismissAlert);
+
+  // Track previous alert count to detect new ones
+  const prevAlertCount = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (incomingAlerts === undefined) return;
+
+    const currentCount = incomingAlerts.length;
+
+    // Only play if count increased (new alert came in) and not on first load
+    if (prevAlertCount.current !== null && currentCount > prevAlertCount.current) {
+      playAlertSound();
+    }
+
+    prevAlertCount.current = currentCount;
+  }, [incomingAlerts?.length]);
 
   const openLocation = (lat?: number, lng?: number) => {
     if (!lat || !lng) return;
@@ -74,7 +110,7 @@ export default function HomeScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
         <View>
-          <Text style={styles.greeting}>SafePass</Text>
+          <Text style={styles.greeting}>vesta</Text>
           <Text style={styles.subGreeting}>
             {user ? `Hi, ${user.name.split(" ")[0]}` : ""}
           </Text>

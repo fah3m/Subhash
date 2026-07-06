@@ -5,16 +5,16 @@ import { requireUser } from "./_helpers";
 export const inviteContact = mutation({
   args: {
     sessionToken: v.string(),
-    email: v.string(),
+    username: v.string(),
     name: v.string(),
   },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx, args.sessionToken);
 
-    const normalizedEmail = args.email.toLowerCase().trim();
+    const normalizedUsername = args.username.toLowerCase().trim();
 
     // Don't allow inviting yourself
-    if (normalizedEmail === user.email) {
+    if (normalizedUsername === user.username) {
       throw new Error("You can't invite yourself.");
     }
 
@@ -22,20 +22,20 @@ export const inviteContact = mutation({
     const existing = await ctx.db
       .query("trustedContacts")
       .withIndex("by_owner", (q) => q.eq("ownerId", user._id))
-      .filter((q) => q.eq(q.field("email"), normalizedEmail))
+      .filter((q) => q.eq(q.field("username"), normalizedUsername))
       .first();
 
     if (existing) throw new Error("This person is already in your circle.");
 
     const invitedUser = await ctx.db
       .query("users")
-      .withIndex("by_email", (q) => q.eq("email", normalizedEmail))
+      .withIndex("by_username", (q) => q.eq("username", normalizedUsername))
       .first();
 
     await ctx.db.insert("trustedContacts", {
       ownerId: user._id,
       contactUserId: invitedUser?._id,
-      email: normalizedEmail,
+      username: normalizedUsername,
       name: args.name.trim(),
       status: "pending",
       invitedAt: Date.now(),
@@ -100,7 +100,7 @@ export const listPendingInvites = query({
       .query("trustedContacts")
       .filter((q) =>
         q.and(
-          q.eq(q.field("email"), user.email),
+          q.eq(q.field("username"), user.username),
           q.eq(q.field("status"), "pending")
         )
       )
@@ -113,7 +113,7 @@ export const listPendingInvites = query({
         return {
           ...invite,
           senderName: sender?.name ?? "Unknown",
-          senderEmail: sender?.email ?? "",
+          senderUsername: sender?.username ?? "",
         };
       })
     );

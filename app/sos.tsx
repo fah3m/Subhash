@@ -17,7 +17,7 @@ import { COLORS } from "@/constants/theme";
 
 export default function SOSScreen() {
   const { sessionToken } = useAuth();
-  const { location } = useLocation();
+  const { requestLocationForCheckIn, isFetching: locating } = useLocation();
   const triggerManual = useMutation(api.sos.triggerManual);
   const [triggered, setTriggered] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -34,10 +34,15 @@ export default function SOSScreen() {
           onPress: async () => {
             setLoading(true);
             try {
+              // Prompt for permission / location services here, same as
+              // check-in. But unlike check-in, we do NOT block the alert
+              // if this comes back null — an SOS must go out either way.
+              const coords = await requestLocationForCheckIn();
+
               await triggerManual({
                 sessionToken: sessionToken!,
-                latitude: location?.latitude,
-                longitude: location?.longitude,
+                latitude: coords?.latitude,
+                longitude: coords?.longitude,
               });
               setTriggered(true);
             } catch (err: any) {
@@ -50,6 +55,8 @@ export default function SOSScreen() {
       ]
     );
   };
+
+  const busy = loading || locating;
 
   if (triggered) {
     return (
@@ -82,22 +89,22 @@ export default function SOSScreen() {
 
         <View style={styles.locationRow}>
           <Ionicons
-            name={location ? "location" : "location-outline"}
+            name={locating ? "location" : "location-outline"}
             size={16}
-            color={location ? COLORS.success : COLORS.muted}
+            color={locating ? COLORS.success : COLORS.muted}
           />
-          <Text style={[styles.locationText, { color: location ? COLORS.success : COLORS.muted }]}>
-            {location ? "Location ready" : "Acquiring location..."}
+          <Text style={[styles.locationText, { color: locating ? COLORS.success : COLORS.muted }]}>
+            {locating ? "Getting your location..." : "Location is requested when you press SOS"}
           </Text>
         </View>
 
         <TouchableOpacity
-          style={[styles.sosButton, loading && { opacity: 0.6 }]}
+          style={[styles.sosButton, busy && { opacity: 0.6 }]}
           onPress={handleSOS}
-          disabled={loading}
+          disabled={busy}
           activeOpacity={0.85}
         >
-          {loading ? (
+          {busy ? (
             <ActivityIndicator color={COLORS.white} size="large" />
           ) : (
             <>

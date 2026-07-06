@@ -121,3 +121,36 @@ export const handleExpiry = internalMutation({
     });
   },
 });
+
+export const extendCheckIn = mutation({
+  args: {
+    sessionToken: v.string(),
+    checkInId: v.id("checkIns"),
+    extraSeconds: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireUser(ctx, args.sessionToken);
+    const checkIn = await ctx.db.get(args.checkInId);
+    if (!checkIn || checkIn.userId !== user._id) throw new Error("Not found");
+    if (checkIn.status !== "active") throw new Error("Check-in is not active");
+
+    // Cancel existing scheduled expiry
+    if (checkIn.scheduledFnId) {
+      await ctx.scheduler.cancel(checkIn.scheduledFnId);
+    }
+
+    const newExpiresAt = checkIn.expiresAt + args.extraSeconds * 1000;
+
+    // Schedule new expiry
+    const scheduledFnId = await ctx.scheduler.runAt(
+      newExpiresAt,
+      internal.checkIns.handleExpiry,
+      { checkInId: args.checkInId }
+    );
+
+    await ctx.db.patch(args.checkInId, {
+      expiresAt: newExpiresAt,
+      scheduledFnId,
+    });
+  },
+});

@@ -18,8 +18,7 @@ import { COLORS } from "@/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 
 const DURATIONS = [
-  { label: "30 sec", seconds: 30 },
-  { label: "15 min", seconds: 900 },
+  { label: "5 seconds", seconds: 5 },
   { label: "30 min", seconds: 1800 },
   { label: "1 hour", seconds: 3600 },
   { label: "2 hours", seconds: 7200 },
@@ -27,10 +26,11 @@ const DURATIONS = [
 
 export default function CheckInScreen() {
   const { sessionToken } = useAuth();
-  const { location } = useLocation();
+  const { requestLocationForCheckIn, isFetching: locating } = useLocation();
   const [label, setLabel] = useState("");
   const [selectedDuration, setSelectedDuration] = useState(1800);
   const [loading, setLoading] = useState(false);
+  const [extending, setExtending] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
   const latestCheckIn = useQuery(
@@ -40,6 +40,7 @@ export default function CheckInScreen() {
 
   const startCheckIn = useMutation(api.checkIns.startCheckIn);
   const cancelCheckIn = useMutation(api.checkIns.cancelCheckIn);
+  const extendCheckIn = useMutation(api.checkIns.extendCheckIn);
 
   const { display } = useTimer(
     latestCheckIn?.status === "active" ? latestCheckIn.expiresAt : undefined
@@ -51,14 +52,24 @@ export default function CheckInScreen() {
       Alert.alert("Add a label", "Where are you going?");
       return;
     }
+
     setLoading(true);
     try {
+      // Actively prompt for location right now — permission dialog and/or
+      // "turn on location services" alert fire here if needed.
+      const coords = await requestLocationForCheckIn();
+      if (!coords) {
+        // Blocked: services off or permission denied. Alerts were already
+        // shown inside requestLocationForCheckIn — don't start the check-in.
+        return;
+      }
+
       await startCheckIn({
         sessionToken: sessionToken!,
         label: label.trim(),
         durationSeconds: selectedDuration,
-        latitude: location?.latitude,
-        longitude: location?.longitude,
+        latitude: coords.latitude,
+        longitude: coords.longitude,
       });
       setLabel("");
     } catch (err: any) {
@@ -82,6 +93,24 @@ export default function CheckInScreen() {
       setLoading(false);
     }
   };
+
+  const handleExtend = async () => {
+    if (!latestCheckIn) return;
+    setExtending(true);
+    try {
+      await extendCheckIn({
+        sessionToken: sessionToken!,
+        checkInId: latestCheckIn._id,
+        extraSeconds: 600, // 10 minutes
+      });
+    } catch (err: any) {
+      Alert.alert("Error", err.message);
+    } finally {
+      setExtending(false);
+    }
+  };
+
+  const starting = loading || locating;
 
   if (latestCheckIn === undefined) {
     return (
@@ -132,6 +161,7 @@ export default function CheckInScreen() {
             </Text>
           </View>
         </View>
+
         <TouchableOpacity
           style={[styles.safeButton, loading && { opacity: 0.6 }]}
           onPress={handleCancel}
@@ -143,6 +173,21 @@ export default function CheckInScreen() {
             <>
               <Ionicons name="checkmark-circle" size={22} color="#0A0A0A" />
               <Text style={styles.safeButtonText}>I'm Safe</Text>
+            </>
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.extendButton, extending && { opacity: 0.6 }]}
+          onPress={handleExtend}
+          disabled={extending}
+        >
+          {extending ? (
+            <ActivityIndicator color={COLORS.primary} size="small" />
+          ) : (
+            <>
+              <Ionicons name="add-circle-outline" size={18} color={COLORS.primary} />
+              <Text style={styles.extendButtonText}>Add 10 more minutes</Text>
             </>
           )}
         </TouchableOpacity>
@@ -161,12 +206,12 @@ export default function CheckInScreen() {
 
       <View style={styles.locationRow}>
         <Ionicons
-          name={location ? "location" : "location-outline"}
+          name={locating ? "location" : "location-outline"}
           size={14}
-          color={location ? COLORS.success : "#555"}
+          color={locating ? COLORS.success : "#555"}
         />
-        <Text style={[styles.locationText, { color: location ? COLORS.success : "#555" }]}>
-          {location ? "Location ready" : "Acquiring location..."}
+        <Text style={[styles.locationText, { color: locating ? COLORS.success : "#555" }]}>
+          {locating ? "Getting your location..." : "Location is requested when you start"}
         </Text>
       </View>
 
@@ -204,11 +249,11 @@ export default function CheckInScreen() {
       </View>
 
       <TouchableOpacity
-        style={[styles.startButton, loading && { opacity: 0.6 }]}
+        style={[styles.startButton, starting && { opacity: 0.6 }]}
         onPress={handleStart}
-        disabled={loading}
+        disabled={starting}
       >
-        {loading ? (
+        {starting ? (
           <ActivityIndicator color={COLORS.white} />
         ) : (
           <>
@@ -339,4 +384,18 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   safeButtonText: { color: "#0A0A0A", fontWeight: "800", fontSize: 18 },
+  extendButton: {
+    marginHorizontal: 24,
+    marginTop: 12,
+    backgroundColor: "#161616",
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+    borderRadius: 12,
+    paddingVertical: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  extendButtonText: { color: COLORS.primary, fontWeight: "600", fontSize: 15 },
 });

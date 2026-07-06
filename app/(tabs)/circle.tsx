@@ -18,7 +18,7 @@ import { COLORS } from "@/constants/theme";
 export default function CircleScreen() {
   const { sessionToken } = useAuth();
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
 
@@ -37,8 +37,8 @@ export default function CircleScreen() {
   const removeContact = useMutation(api.trustedContacts.removeContact);
 
   const handleInvite = async () => {
-    if (!name.trim() || !email.trim()) {
-      Alert.alert("Missing fields", "Please enter both a name and email.");
+    if (!name.trim() || !username.trim()) {
+      Alert.alert("Missing fields", "Please enter both a name and username.");
       return;
     }
     setLoading(true);
@@ -46,10 +46,10 @@ export default function CircleScreen() {
       await inviteContact({
         sessionToken: sessionToken!,
         name: name.trim(),
-        email: email.trim(),
+        username: username.trim(),
       });
       setName("");
-      setEmail("");
+      setUsername("");
       setShowForm(false);
       Alert.alert("Invite sent", "They'll see it when they open the app.");
     } catch (err: any) {
@@ -124,12 +124,11 @@ export default function CircleScreen() {
           />
           <TextInput
             style={styles.input}
-            placeholder="Their email"
+            placeholder="Their username"
             placeholderTextColor="#555"
-            value={email}
-            onChangeText={setEmail}
+            value={username}
+            onChangeText={setUsername}
             autoCapitalize="none"
-            keyboardType="email-address"
           />
           <TouchableOpacity
             style={[styles.inviteButton, loading && { opacity: 0.6 }]}
@@ -146,26 +145,28 @@ export default function CircleScreen() {
       )}
 
       {pendingInvites.map((invite) => (
-  <View key={invite._id} style={styles.contactCard}>
-    <View style={styles.contactInfo}>
-      <View style={styles.avatar}>
-        <Text style={styles.avatarText}>
-          {invite.senderName.charAt(0).toUpperCase()}
-        </Text>
-      </View>
-      <View>
-        <Text style={styles.contactName}>{invite.senderName}</Text>
-        <Text style={styles.contactEmail}>{invite.senderEmail} wants to add you</Text>
-      </View>
-    </View>
-    <TouchableOpacity
-      style={styles.acceptButton}
-      onPress={() => handleAccept(invite._id)}
-    >
-      <Text style={styles.acceptButtonText}>Accept</Text>
-    </TouchableOpacity>
-  </View>
-))}
+        <View key={invite._id} style={styles.contactCard}>
+          <View style={styles.contactInfo}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>
+                {invite.senderName.charAt(0).toUpperCase()}
+              </Text>
+            </View>
+            <View>
+              <Text style={styles.contactName}>{invite.senderName}</Text>
+              <Text style={styles.contactEmail}>
+                {invite.senderUsername} wants to add you
+              </Text>
+            </View>
+          </View>
+          <TouchableOpacity
+            style={styles.acceptButton}
+            onPress={() => handleAccept(invite._id)}
+          >
+            <Text style={styles.acceptButtonText}>Accept</Text>
+          </TouchableOpacity>
+        </View>
+      ))}
 
       <View style={styles.section}>
         <Text style={styles.sectionLabel}>
@@ -195,7 +196,7 @@ export default function CircleScreen() {
                   </View>
                   <View>
                     <Text style={styles.contactName}>{item.name}</Text>
-                    <Text style={styles.contactEmail}>{item.email}</Text>
+                    <Text style={styles.contactEmail}>{item.username}</Text>
                   </View>
                 </View>
                 <View style={styles.contactRight}>

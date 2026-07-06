@@ -11,25 +11,31 @@ import {
   Alert,
 } from "react-native";
 import { router } from "expo-router";
+import { ConvexError } from "convex/values";
 import { useAuth } from "@/contexts/AuthContext";
 
 export default function LoginScreen() {
   const { login } = useAuth();
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert("Missing fields", "Please enter your email and password.");
+    if (!username || !password) {
+      Alert.alert("Missing fields", "Please enter your username and password.");
       return;
     }
     setLoading(true);
     try {
-      await login(email, password);
+      await login(username, password);
       router.replace("/(tabs)/home");
     } catch (err: any) {
-      Alert.alert("Login failed", err.message ?? "Something went wrong.");
+      const message =
+        err instanceof ConvexError
+          ? (err.data as string)
+          : err?.message ?? "Something went wrong. Please try again.";
+
+      Alert.alert("Login failed", message);
     } finally {
       setLoading(false);
     }
@@ -41,18 +47,18 @@ export default function LoginScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <View style={styles.inner}>
-        <Text style={styles.title}>SafePass</Text>
+        <Text style={styles.title}>vesta</Text>
         <Text style={styles.subtitle}>Sign in to your account</Text>
 
         <TextInput
           style={styles.input}
-          placeholder="Email"
+          placeholder="Username"
           placeholderTextColor="#555"
-          value={email}
-          onChangeText={setEmail}
+          value={username}
+          onChangeText={setUsername}
           autoCapitalize="none"
-          keyboardType="email-address"
-          autoComplete="email"
+          autoCorrect={false}
+          autoComplete="username"
         />
 
         <TextInput

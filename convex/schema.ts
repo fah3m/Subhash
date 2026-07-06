@@ -3,12 +3,12 @@ import { v } from "convex/values";
 
 export default defineSchema({
   users: defineTable({
-    name: v.string(),
-    email: v.string(),
-    passwordHash: v.string(),
-    pushToken: v.optional(v.string()),
-    createdAt: v.number(),
-  }).index("by_email", ["email"]),
+  name: v.string(),
+  username: v.string(),        // was: email: v.string(),
+  passwordHash: v.string(),
+  pushToken: v.optional(v.string()),
+  createdAt: v.number(),
+}).index("by_username", ["username"]),   // was: .index("by_email", ["email"]),
 
   sessions: defineTable({
     userId: v.id("users"),
@@ -17,13 +17,13 @@ export default defineSchema({
   }).index("by_token", ["token"]),
 
   trustedContacts: defineTable({
-    ownerId: v.id("users"),
-    contactUserId: v.optional(v.id("users")),
-    email: v.string(),
-    name: v.string(),
-    status: v.union(v.literal("pending"), v.literal("accepted")),
-    invitedAt: v.number(),
-  }).index("by_owner", ["ownerId"]),
+  ownerId: v.id("users"),
+  contactUserId: v.optional(v.id("users")),
+  username: v.string(),        // was: email: v.string(),
+  name: v.string(),
+  status: v.union(v.literal("pending"), v.literal("accepted")),
+  invitedAt: v.number(),
+}).index("by_owner", ["ownerId"]),
 
   evidence: defineTable({
     userId: v.id("users"),

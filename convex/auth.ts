@@ -1,9 +1,9 @@
 import { mutation, query } from "./_generated/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-async function hashPassword(password: string): Promise<string> {
+async function hashPassword(password: string) {
   const encoder = new TextEncoder();
   // Simple salt prefix — good enough for an MVP demo
   const data = encoder.encode("safepass:" + password);
@@ -12,7 +12,7 @@ async function hashPassword(password: string): Promise<string> {
   return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-function generateToken(): string {
+function generateToken() {
   const array = new Uint8Array(32);
   crypto.getRandomValues(array);
   return Array.from(array)
@@ -25,25 +25,25 @@ function generateToken(): string {
 export const register = mutation({
   args: {
     name: v.string(),
-    email: v.string(),
+    username: v.string(),
     password: v.string(),
   },
-  handler: async (ctx, { name, email, password }) => {
-    const normalizedEmail = email.toLowerCase().trim();
+  handler: async (ctx, { name, username, password }) => {
+    const normalizedUsername = username.toLowerCase().trim();
 
     const existing = await ctx.db
       .query("users")
-      .withIndex("by_email", (q) => q.eq("email", normalizedEmail))
+      .withIndex("by_username", (q) => q.eq("username", normalizedUsername))
       .first();
 
-    if (existing) throw new Error("An account with this email already exists.");
-    if (password.length < 6) throw new Error("Password must be at least 6 characters.");
+    if (existing) throw new ConvexError("That username is already taken.");
+    if (password.length < 6) throw new ConvexError("Password must be at least 6 characters.");
 
     const passwordHash = await hashPassword(password);
 
     const userId = await ctx.db.insert("users", {
       name: name.trim(),
-      email: normalizedEmail,
+      username: normalizedUsername,
       passwordHash,
       createdAt: Date.now(),
     });
@@ -61,23 +61,23 @@ export const register = mutation({
 
 export const login = mutation({
   args: {
-    email: v.string(),
+    username: v.string(),
     password: v.string(),
   },
-  handler: async (ctx, { email, password }) => {
-    const normalizedEmail = email.toLowerCase().trim();
+  handler: async (ctx, { username, password }) => {
+    const normalizedUsername = username.toLowerCase().trim();
 
     const user = await ctx.db
       .query("users")
-      .withIndex("by_email", (q) => q.eq("email", normalizedEmail))
+      .withIndex("by_username", (q) => q.eq("username", normalizedUsername))
       .first();
 
     // Same error for both "user not found" and "wrong password" — avoids enumeration
-    if (!user) throw new Error("Invalid email or password.");
+    if (!user) throw new ConvexError("Invalid username or password.");
 
     const passwordHash = await hashPassword(password);
     if (passwordHash !== user.passwordHash) {
-      throw new Error("Invalid email or password.");
+      throw new ConvexError("Invalid username or password.");
     }
 
     const token = generateToken();

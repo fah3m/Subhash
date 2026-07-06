@@ -12,26 +12,36 @@ import {
   ScrollView,
 } from "react-native";
 import { router } from "expo-router";
+import { ConvexError } from "convex/values";
 import { useAuth } from "@/contexts/AuthContext";
 
 export default function RegisterScreen() {
   const { register } = useAuth();
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
-    if (!name || !email || !password) {
+    if (!name || !username || !password) {
       Alert.alert("Missing fields", "Please fill in all fields.");
+      return;
+    }
+    if (password.length < 6) {
+      Alert.alert("Weak password", "Password must be at least 6 characters.");
       return;
     }
     setLoading(true);
     try {
-      await register(name, email, password);
+      await register(name, username, password);
       router.replace("/(tabs)/home");
     } catch (err: any) {
-      Alert.alert("Registration failed", err.message ?? "Something went wrong.");
+      const message =
+        err instanceof ConvexError
+          ? (err.data as string)
+          : err?.message ?? "Something went wrong. Please try again.";
+
+      Alert.alert("Registration failed", message);
     } finally {
       setLoading(false);
     }
@@ -43,7 +53,7 @@ export default function RegisterScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView contentContainerStyle={styles.inner} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>SafePass</Text>
+        <Text style={styles.title}>vesta</Text>
         <Text style={styles.subtitle}>Create your account</Text>
 
         <TextInput
@@ -58,13 +68,13 @@ export default function RegisterScreen() {
 
         <TextInput
           style={styles.input}
-          placeholder="Email"
+          placeholder="Username"
           placeholderTextColor="#555"
-          value={email}
-          onChangeText={setEmail}
+          value={username}
+          onChangeText={setUsername}
           autoCapitalize="none"
-          keyboardType="email-address"
-          autoComplete="email"
+          autoCorrect={false}
+          autoComplete="username-new"
         />
 
         <TextInput
